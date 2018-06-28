@@ -1,7 +1,9 @@
-
 import torch
+import random
+
 
 class TSP:
+
     def __init__(self, cost_matrix, forbidden):
         """
         :param cost_matrix: 2d matrix representing costs of travelling between points af appropriate indexes
@@ -39,14 +41,25 @@ class TSP:
         """
         inds_tensor = torch.stack(individuals)
         assert len(inds_tensor.shape) == 3
-        return torch.sum(inds_tensor * self.cost_matrix, -1).sum(-1)
+        return list(torch.sum(inds_tensor * self.cost_matrix, -1).sum(-1))
 
     def is_elgible(self, individual):
         return (self.forbidden * individual).sum() == 0
 
     def create_random_population(self, num_individuals):
+        return [self.random_individual() for _ in range(num_individuals)]
+
+    def random_individual(self):
+        indices = [n for n in range(self.cost_matrix.shape[0])]
+        random.shuffle(indices)
+        while(True):
+            individual = self.individual(indices)
+            if self.is_elgible(individual):
+                return individual
+            else:
+                print("not returning")
+                random.shuffle(indices)
+
+    def single_generation(population, preserve_best=0.25, tournament_size=5):
+        fitness = self.evaluate_multiple(population)
         pass
-
-
-
-
