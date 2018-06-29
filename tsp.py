@@ -25,6 +25,8 @@ class TSP:
         individual = torch.zeros(len(ids), len(ids), dtype=torch.float)
         for i, id in enumerate(ids):
             individual[ids[i - 1]][id] = 1
+
+        assert self.is_elgible(individual)
         return individual
 
     def evaluate(self, individual):
@@ -61,14 +63,37 @@ class TSP:
                 print("not returning")
                 random.shuffle(indices)
 
+    def _tournament(self, pop_fitness, tournament_size=5):
+        index_w_fitness = [(i, f) for i, f in enumerate(pop_fitness)]
+        subpop = random.sample(index_w_fitness, tournament_size)
+        return [e[0] for e in sorted(subpop, key=lambda pair: pair[1])[:2]]
+
+    def crossover(self, parent_1, parent_2):
+        pass
+
     def single_generation(self,
                           population,
                           preserve_best=0.25,
                           tournament_size=5):
+        # evaluate population fitness
         pop_fitness = self.evaluate_multiple(population)
+
+        # select indexes of best indiviudals
         most_fit_indexes = utils.get_max_indexes(
             pop_fitness, int(preserve_best * len(population)))
 
+        # preserve best individuals
         new_population = [population[i] for i in most_fit_indexes]
+
+        # choose parents indexes for crossover
+        parents_to_crossover = [self._tournament(pop_fitness, tournament_size)
+                                for i in range(len(population) - len(new_population))]
+
+        for parent_1_index, parent_2_index in parents_to_crossover:
+            new_population.append(self._crossover(
+                population[parent_1_index],
+                population[parent_2_index]))
+
+        print(parents_to_crossover)
 
         return new_population
