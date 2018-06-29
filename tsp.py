@@ -1,5 +1,6 @@
 import torch
 import random
+import utils
 
 
 class TSP:
@@ -60,6 +61,14 @@ class TSP:
                 print("not returning")
                 random.shuffle(indices)
 
-    def single_generation(population, preserve_best=0.25, tournament_size=5):
-        fitness = self.evaluate_multiple(population)
-        pass
+    def single_generation(self,
+                          population,
+                          preserve_best=0.25,
+                          tournament_size=5):
+        pop_fitness = self.evaluate_multiple(population)
+        most_fit_indexes = utils.get_max_indexes(
+            pop_fitness, int(preserve_best * len(population)))
+
+        new_population = [population[i] for i in most_fit_indexes]
+
+        return new_population

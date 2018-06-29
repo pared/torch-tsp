@@ -18,3 +18,9 @@ def from_x_y(xys):
             if index1 == index2:
                 forbidden[index1, index2] = 1
     return tsp.TSP(cost_matrix, forbidden)
+
+
+def get_max_indexes(values, n=1):
+    best_n = sorted(values)
+    best_n = best_n[:n]
+    return [i for i, e in enumerate(values) if e in best_n][:n]
