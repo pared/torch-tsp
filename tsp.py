@@ -47,7 +47,14 @@ class TSP:
         return list(torch.sum(inds_tensor * self.cost_matrix, -1).sum(-1))
 
     def is_elgible(self, individual):
-        return (self.forbidden * individual).sum() == 0
+        does_not_contain_forbidden_routes = (self.forbidden * individual).sum() == 0
+        # assert does_not_contain_forbidden_routes
+        has_only_one_route_in_each_row = individual.sum(dim=1).eq(torch.ones(individual.shape[0])).all()
+        # assert has_only_one_route_in_each_row
+        has_only_one_route_in_each_col = individual.sum(dim=0).eq(torch.ones(individual.shape[0])).all()
+        # assert has_only_one_route_in_each_col
+
+        return does_not_contain_forbidden_routes and has_only_one_route_in_each_col and has_only_one_route_in_each_row
 
     def create_random_population(self, num_individuals):
         return [self.random_individual() for _ in range(num_individuals)]
@@ -68,8 +75,34 @@ class TSP:
         subpop = random.sample(index_w_fitness, tournament_size)
         return [e[0] for e in sorted(subpop, key=lambda pair: pair[1])[:2]]
 
-    def crossover(self, parent_1, parent_2):
-        pass
+    def crossover(self, parent1, parent2, split_index=None):
+
+        while True:
+
+            if not split_index:
+                split_index = random.randint(1, parent1.shape[0])
+
+        # first part comes from parent1
+            child = parent1[:, :split_index]
+
+        # not which rows already have ones (individual has to have exactly one 1 in each row and col)
+            _, occupied_rows = child.max(dim=0)
+
+        # get indexes where given row of p2 has 1
+            _, p2_max_col_indexes = parent2.max(dim=1)
+
+        # take all cols indexes that are not already occupied in child
+            p2_cols_to_preserve = [e for row, e in enumerate(p2_max_col_indexes) if row not in occupied_rows]
+
+        # copy each col:
+            child = [child]
+            [child.append(parent2[:, c].reshape([parent1.shape[0], 1])) for c in sorted(p2_cols_to_preserve)]
+
+            result = torch.cat(child, 1)
+
+            if self.is_elgible(result):
+                return result
+
 
     def single_generation(self,
                           population,
@@ -90,7 +123,7 @@ class TSP:
                                 for i in range(len(population) - len(new_population))]
 
         for parent_1_index, parent_2_index in parents_to_crossover:
-            new_population.append(self._crossover(
+            new_population.append(self.crossover(
                 population[parent_1_index],
                 population[parent_2_index]))
 
