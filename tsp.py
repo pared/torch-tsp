@@ -34,15 +34,14 @@ class TSP:
         :param individual: individual is a tensor od shape equal to cost_matrix, each column of individual has single 1 and zeros
         :return:
         """
-        assert(self.cost_matrix.shape == individual.shape)
-        return torch.sum(self.cost_matrix * individual)
+        assert(len(individual) == len(set(individual)))
+        return torch.sum(self.cost_matrix * self.individual(individual))
 
     def evaluate_multiple(self, individuals):
-        """
-        :param individuals: List of tensors of shape equalt to cost matrix, each column has to have single 1 and zeros
-        :return:
-        """
-        inds_tensor = torch.stack(individuals)
+
+        
+        individuals_as_matrices = [self.individual(i) for i in individuals]
+        inds_tensor = torch.stack(individuals_as_matrices)
         assert len(inds_tensor.shape) == 3
         return list(torch.sum(inds_tensor * self.cost_matrix, -1).sum(-1))
 
@@ -60,49 +59,46 @@ class TSP:
         return [self.random_individual() for _ in range(num_individuals)]
 
     def random_individual(self):
+
         indices = [n for n in range(self.cost_matrix.shape[0])]
         random.shuffle(indices)
-        while(True):
-            individual = self.individual(indices)
-            if self.is_elgible(individual):
-                return individual
-            else:
-                print("not returning")
-                random.shuffle(indices)
+        return indices
 
-    def _tournament(self, pop_fitness, tournament_size=5):
+    def tournament(self, pop_fitness, tournament_size=5):
         index_w_fitness = [(i, f) for i, f in enumerate(pop_fitness)]
         subpop = random.sample(index_w_fitness, tournament_size)
         return [e[0] for e in sorted(subpop, key=lambda pair: pair[1])[:2]]
 
     def crossover(self, parent1, parent2, split_index=None):
+        if split_index is None:
+            split_index = random.randint(0, len(parent1))
 
-        while True:
+        child = parent1[:split_index]
+        for elem in parent2:
+            if elem not in child:
+                child.append(elem)
 
-            if not split_index:
-                split_index = random.randint(1, parent1.shape[0])
+        assert len(child) == len(parent1) == len(parent2)
+        return child
 
-        # first part comes from parent1
-            child = parent1[:, :split_index]
+    def mutate(self, individual, prob = 0.05, replace_indexes=None):
+        ind1 = None
+        ind2 = None
 
-        # not which rows already have ones (individual has to have exactly one 1 in each row and col)
-            _, occupied_rows = child.max(dim=0)
+        if replace_indexes:
+            assert len(replace_indexes) == 2
+            ind1 = replace_indexes[0]
+            ind2 = replace_indexes[1]
 
-        # get indexes where given row of p2 has 1
-            _, p2_max_col_indexes = parent2.max(dim=1)
+        if not ind1:
+            if random.random() < prob:
+                ind1 = random.randint(0, len(individual)-1)
+                ind2 = random.randint(0, len(individual)-1)
 
-        # take all cols indexes that are not already occupied in child
-            p2_cols_to_preserve = [e for row, e in enumerate(p2_max_col_indexes) if row not in occupied_rows]
+        if ind1 is not None:
+            individual[ind1], individual[ind2] = individual[ind2], individual[ind1]
 
-        # copy each col:
-            child = [child]
-            [child.append(parent2[:, c].reshape([parent1.shape[0], 1])) for c in sorted(p2_cols_to_preserve)]
-
-            result = torch.cat(child, 1)
-
-            if self.is_elgible(result):
-                return result
-
+        return individual
 
     def single_generation(self,
                           population,
@@ -112,21 +108,26 @@ class TSP:
         pop_fitness = self.evaluate_multiple(population)
 
         # select indexes of best indiviudals
-        most_fit_indexes = utils.get_max_indexes(
+        most_fit_indexes = utils.get_sorted_n_args(
             pop_fitness, int(preserve_best * len(population)))
 
         # preserve best individuals
         new_population = [population[i] for i in most_fit_indexes]
 
         # choose parents indexes for crossover
-        parents_to_crossover = [self._tournament(pop_fitness, tournament_size)
+        parents_to_crossover = [self.tournament(pop_fitness, tournament_size)
                                 for i in range(len(population) - len(new_population))]
 
         for parent_1_index, parent_2_index in parents_to_crossover:
+
             new_population.append(self.crossover(
                 population[parent_1_index],
                 population[parent_2_index]))
 
-        print(parents_to_crossover)
+        assert len(new_population) == len(population)
+
+        for individual in new_population:
+            self.mutate(individual)
 
         return new_population
+

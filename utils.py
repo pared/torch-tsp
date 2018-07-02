@@ -20,7 +20,7 @@ def from_x_y(xys):
     return tsp.TSP(cost_matrix, forbidden)
 
 
-def get_max_indexes(values, n=1):
-    best_n = sorted(values)
+def get_sorted_n_args(values, n=1, key=lambda x:x):
+    best_n = sorted(values, key=key)
     best_n = best_n[:n]
     return [i for i, e in enumerate(values) if e in best_n][:n]
