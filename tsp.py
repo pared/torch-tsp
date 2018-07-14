@@ -50,6 +50,8 @@ class TSP:
         
         individuals_as_matrices = [self.individual(i) for i in individuals]
         inds_tensor = torch.stack(individuals_as_matrices)
+        if self.use_gpu:
+            inds_tensor = inds_tensor.cuda()
         assert len(inds_tensor.shape) == 3
         return list(torch.sum(inds_tensor * self.cost_matrix, -1).sum(-1))
 
