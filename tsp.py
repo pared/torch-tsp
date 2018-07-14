@@ -5,13 +5,14 @@ import utils
 
 class TSP:
 
-    def __init__(self, cost_matrix, forbidden):
+    def __init__(self, cost_matrix, forbidden, use_gpu=False):
         """
         :param cost_matrix: 2d matrix representing costs of travelling between points af appropriate indexes
         :param forbidden: matrix of same shape as above filled wiht 1's and 0's, cannot use connections marked as 1.
         """
 
         assert cost_matrix.shape == forbidden.shape
+        self.use_gpu=use_gpu
         self.cost_matrix = cost_matrix
         self.forbidden = forbidden
 
@@ -27,6 +28,10 @@ class TSP:
             individual[ids[i - 1]][id] = 1
 
         assert self.is_elgible(individual)
+
+        if self.use_gpu:
+            individual = individual.cuda()
+
         return individual
 
     def evaluate(self, individual):
