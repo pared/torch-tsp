@@ -15,6 +15,9 @@ class TSP:
         self.use_gpu=use_gpu
         self.cost_matrix = cost_matrix
         self.forbidden = forbidden
+        if self.use_gpu:
+            self.cost_matrix = self.cost_matrix.cuda()
+            self.forbidden = self.forbidden.cuda()
 
     def individual(self, ids):
         # ids shall match cost_matrix rows and cols
